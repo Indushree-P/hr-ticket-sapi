@@ -165,5 +165,20 @@
 			</snapshots>
 		</pluginRepository>
 	</pluginRepositories>
+	<distributionManagement>
+    <repository>
+        <id>anypoint-connected-app</id>
+        <name>Exchange Repository</name>
+        <url>https://maven.anypoint.mulesoft.com/api/v3/organizations/${project.groupId}/maven</url>
+        <layout>default</layout>
+    </repository>
+
+    <snapshotRepository>
+        <id>anypoint-connected-app</id>
+        <name>Exchange Repository Snapshots</name>
+        <url>https://maven.anypoint.mulesoft.com/api/v3/organizations/${project.groupId}/maven</url>
+        <layout>default</layout>
+    </snapshotRepository>
+</distributionManagement>
 
 </project>
