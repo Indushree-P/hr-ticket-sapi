@@ -1,0 +1,18 @@
+db:
+  host: sql12.freesqldatabase.com
+  port: "3306"
+  name: sql12838180
+  user: sql12838180
+  
+groq:
+  host: api.groq.com
+  port: "443"
+  path: /openai/v1/chat/completions
+  
+gmail:
+  host: smtp.gmail.com
+  port: "465"
+  user: pindushree2004@gmail.com
+  
+mule:
+  key: mulesoft123

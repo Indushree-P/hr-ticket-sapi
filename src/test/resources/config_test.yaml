@@ -1,0 +1,14 @@
+groq.host: api.groq.com
+groq.port: "443"
+groq.path: /openai/v1/chat/completions
+
+db.host: localhost
+db.port: "3306"
+db.user: dummy
+db.name: dummy
+
+gmail.host: smtp.gmail.com
+gmail.user: dummy@test.com
+gmail.port: "465"
+
+mule.key: mulesoft123

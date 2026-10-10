@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<error-handler name="global_error_handler" doc:id="7e83b24a-72ae-4594-a11f-12c2fec5356a" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate6" doc:id="c529c79a-0fc9-4df6-97f1-cbcb88943e3c" type="APIKIT:BAD_REQUEST" >
+			<set-variable value="#[400]" doc:name="Variable for httpStatus" doc:id="762d9b16-e5d5-4a88-8200-3702cca57822" variableName="httpStatus" />
+			<flow-ref doc:name="invoke common error handler" doc:id="61537ad9-1d05-4924-ba7d-5231010e42e2" name="common_error_handler" />
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate7" doc:id="16241136-e7f8-4f17-b4e1-7f28458112e7" type="APIKIT:NOT_FOUND" >
+			<set-variable value="#[404]" doc:name="Variable for httpStatus" doc:id="7c5cab97-aa88-430d-9587-69d0b4049508" variableName="httpStatus" />
+			<flow-ref doc:name="invoke common error handler" doc:id="4ebc61f2-fcbe-4908-8761-cc039220222a" name="common_error_handler" />
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate8" doc:id="c8e7db7b-d98f-4712-a6a8-4db07b6dc65d" type="APIKIT:METHOD_NOT_ALLOWED" >
+			<set-variable value="#[405]" doc:name="Variable for httpStatus" doc:id="6a430b96-2566-4bcf-bab8-d45c546bb0a1" variableName="httpStatus" />
+			<flow-ref doc:name="invoke common error handler" doc:id="25965b76-f6dc-422f-af02-b096492ce472" name="common_error_handler" />
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate9" doc:id="344e764d-d507-486f-b730-5c9366b7e05b" type="APIKIT:NOT_ACCEPTABLE" >
+			<set-variable value="#[406]" doc:name="Variable for httpStatus" doc:id="9311ae56-4a88-423d-97db-636c1ddf9f13" variableName="httpStatus" />
+			<flow-ref doc:name="invoke common error handler" doc:id="70008942-a7b9-439a-85c5-703cc2ab0a22" name="common_error_handler" />
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate10" doc:id="0bb18cc9-c018-4e31-ad4a-1e0fe932a3e0" type="APIKIT:UNSUPPORTED_MEDIA_TYPE" >
+			<set-variable value="#[415]" doc:name="Variable for httpStatus" doc:id="46355bde-a61b-42a0-82e6-85cda5d47c93" variableName="httpStatus" />
+			<flow-ref doc:name="invoke common error handler" doc:id="b2e25a25-3c78-4f47-bda6-98519c1eb7f9" name="common_error_handler" />
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate11" doc:id="60acc065-aefc-4045-ac43-d5352372a0c4" type="APIKIT:NOT_IMPLEMENTED" >
+			<set-variable value="#[501]" doc:name="Variable for httpStatus" doc:id="8ca8a479-575d-4a0b-b170-c73088d692af" variableName="httpStatus" />
+			<flow-ref doc:name="invoke common error handler" doc:id="1e1b4347-043e-4719-8418-af41fa50fc51" name="common_error_handler" />
+		</on-error-propagate>
+	
+</error-handler>
+	<sub-flow name="common_error_handler" doc:id="42c1c4a1-b5ae-4a84-aa6d-bb2d0edcf596" >
+		<ee:transform doc:name="error_response" doc:id="ad9bb04e-84d4-412f-96b8-53d38b808813">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    statusCode: vars.httpStatus,
+    correlationId: correlationId,
+    errorType: error.errorType.identifier,
+    message: error.description
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="log-error-details" doc:id="3ce8f072-e585-41cf-ad7b-0fedb99aeca2" message="Correlation ID: #[vars.correlationId default correlationId] | Error Type: #[error.errorType.identifier] | Error Message: #[error.description]"/>
+	</sub-flow>
+</mule>

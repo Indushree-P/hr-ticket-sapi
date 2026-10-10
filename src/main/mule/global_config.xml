@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="dc83a03b-067d-4dfa-821e-b0c94fa09dd7" >
+		<http:request-connection protocol="HTTPS" host="${groq.host}" port="${groq.port}" />
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="eea8f8a7-c1e5-4421-a4c7-2a1f5641b3aa" file="config_properties_sapi.yaml" />
+	<configuration doc:name="Configuration" doc:id="2b07f7d7-5813-4297-8697-dc8c45049dcf" defaultErrorHandler-ref="global_error_handler" />
+	<secure-properties:config name="Secure_Properties_Config1" doc:name="Secure Properties Config" doc:id="7197c359-f2d1-4170-8a1c-140c4abba83f" file="secure_properties_sapi.yaml" key="mulesoft123" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="acd261c5-762e-4da8-bba3-9ceeb524bbc0" >
+		<email:smtps-connection host="${gmail.host}" port="${gmail.port}" user="${gmail.user}" password="${secure::gmail.password}" >
+			<tls:context >
+				<tls:trust-store insecure="true" />
+			</tls:context>
+		</email:smtps-connection>
+	</email:smtp-config>
+
+</mule>
+	

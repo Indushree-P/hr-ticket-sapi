@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <http:listener-config name="hr-ticket-sapi-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="hr-ticket-sapi-config" api="resource::a800e192-e208-4c3c-9e10-977416e56127:hr-ticket-sapi:1.0.3:raml:zip:hr-ticket-sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="af7be29d-a712-452d-87e8-63e4cc5b843c" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${secure::db.password}" database="${db.name}" />
+	</db:config>
+	<flow name="post:\alerts:application\json:hr-ticket-sapi-config">
+		<email:send doc:name="send-critical-alert-email" doc:id="ea46c208-6e3e-4c50-9b78-76a85ddb4ad7" toAddresses='#[["pindushree2004@gmail.com"]]' fromAddress="pindushree2004@gmail.com" subject='#["CRITICAL HR TICKET ALERT"]' config-ref="Email_SMTP">
+			<email:bcc-addresses />
+			<email:body contentType="text/html" >
+				<email:content ><![CDATA[#[%dw 2.0
+output application/java
+---
+"<html>
+<body>
+
+<h2 style='color:red;'>CRITICAL HR TICKET ALERT</h2>
+
+<table border='1' cellpadding='8' cellspacing='0' style='border-collapse: collapse;'>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+
+<tr>
+<td>Ticket ID</td>
+<td>" ++ (payload.ticketId as String) ++ "</td>
+</tr>
+
+<tr>
+<td>Department</td>
+<td>" ++ (payload.department as String) ++ "</td>
+</tr>
+
+<tr>
+<td>Priority</td>
+<td>" ++ (payload.priority as String) ++ "</td>
+</tr>
+
+<tr>
+<td>Description</td>
+<td>" ++ (payload.description as String) ++ "</td>
+</tr>
+
+</table>
+
+</body>
+</html>"]]]></email:content>
+			</email:body>
+		</email:send>
+		<ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  alertSent: true
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\ai\priority:application\json:hr-ticket-sapi-config" doc:id="0a5cbbb6-4afc-4f5f-b9a4-b46a828db5c1">
+        <set-variable value="#[payload]" doc:name="store original request" doc:id="edd8caf0-33f4-4be6-88ae-4a5e382226ad" variableName="originalRequest"/>
+		<ee:transform doc:name="Prepare ai request">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  model: "openai/gpt-oss-120b",
+  messages: [
+    {
+      role: "system",
+      content: "You are an HR Helpdesk Ticket Classification and Validation Assistant.
+
+Your responsibilities are:
+
+1. Determine the ticket sentiment:
+   - POSITIVE
+   - NEUTRAL
+   - NEGATIVE
+
+2. Determine the ticket priority:
+   - CRITICAL
+   - NORMAL
+
+3. Validate whether the provided issue type truly matches the ticket description.
+
+Valid Issue Types:
+- Salary
+- Payroll
+- VPN Connection
+- Battery
+- Laptop
+- Password Reset
+- Email
+- Portal Access
+
+Issue Type Validation Rules:
+
+The issue type must represent the PRIMARY problem described in the ticket.
+
+Set isIssueTypeValid to TRUE only when the selected issue type accurately represents the ticket description.
+
+Set isIssueTypeValid to FALSE when:
+- The description belongs to a different issue category.
+- The description is unrelated to the selected issue type.
+- The selected issue type does not represent the primary issue being reported.
+
+Priority Rules:
+
+CRITICAL:
+- Salary or payroll issues
+- Portal inaccessible
+- System outage
+- Department-wide impact
+- Team-wide impact
+- Multiple employees affected
+- Business-critical application failures
+
+NORMAL:
+- Password reset requests
+- Single-user issues
+- Laptop issues
+- Battery issues
+- Email issues
+- General requests
+- Policy questions
+
+Validation Examples:
+
+Issue Type: Salary
+Description: Salary not credited yet.
+Result:
+isIssueTypeValid = true
+
+Issue Type: Payroll
+Description: Payroll deductions are incorrect.
+Result:
+isIssueTypeValid = true
+
+Issue Type: Payroll
+Description: Everyone is not able to access the portal.
+Result:
+isIssueTypeValid = false
+
+Issue Type: Battery
+Description: Laptop battery drains quickly.
+Result:
+isIssueTypeValid = true
+
+Issue Type: Battery
+Description: Salary not credited yet.
+Result:
+isIssueTypeValid = false
+
+Issue Type: VPN Connection
+Description: Unable to connect to VPN.
+Result:
+isIssueTypeValid = true
+
+Issue Type: VPN Connection
+Description: Salary not credited yet.
+Result:
+isIssueTypeValid = false
+
+Issue Type: Email
+Description: Unable to receive emails.
+Result:
+isIssueTypeValid = true
+
+Issue Type: Email
+Description: Payroll not processed this month.
+Result:
+isIssueTypeValid = false
+
+Issue Type: Portal Access
+Description: Not able to access the portal.
+Result:
+isIssueTypeValid = true
+
+Issue Type: Payroll
+Description: Not able to access the portal.
+Result:
+isIssueTypeValid = false
+
+
+Return ONLY valid JSON in the exact format below and do not include any explanation:
+
+{
+  \"sentiment\":\"NEGATIVE\",
+  \"priority\":\"CRITICAL\",
+  \"isIssueTypeValid\":true
+}"
+    },
+    {
+      role: "user",
+      content:
+        "Issue Type: " ++ payload.issueType ++
+        "\nDescription: " ++ payload.description
+    }
+  ],
+  temperature: 0
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="1f6e0553-d021-4949-9c9f-0207c6146b3f" message='Api key loaded- proceeding to the next level'/>
+		<http:request method="POST" doc:name="invoke-groq-api" doc:id="9c30b178-7b54-4c1b-ac1f-e25fea54f291" config-ref="HTTP_Request_configuration" path="${groq.path}">
+			<http:headers ><![CDATA[#[%dw 2.0
+import p from Mule
+output application/java
+---
+{
+    "Authorization": "Bearer " ++ p("secure::groq.apiKey"),
+    "Content-Type": "application/json"
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Parse ai response" doc:id="85481f84-e918-4a5c-b0a4-ef4f63f09e0c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var result =
+    read(
+        payload.choices[0].message.content,
+        "application/json"
+    )
+
+---
+{
+    sentiment: result.sentiment,
+    priority: result.priority,
+    isIssueTypeValid: result.isIssueTypeValid
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="log-ai-priority-response" doc:id="10052078-28a1-4e0c-bdbb-1dd8403a7522" message="#[payload]"/>
+    </flow>
+    <flow name="post:\tickets:application\json:hr-ticket-sapi-config" doc:id="f58a8613-b4b2-48e2-a233-18e0f96f6e14">
+		<logger level="INFO" doc:name="log-db-request-payload" doc:id="078edd63-df36-4d27-af84-28bcd05cef2c" message="#[write(payload,'application/json')]"/>
+		<db:insert doc:name="Insert" doc:id="b5868f08-4a97-493b-ba0a-17e62b72a200" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO tickets
+(
+    ticket_id,
+    employee_id,
+    department,
+    issue_type,
+    description,
+    sentiment,
+    priority,
+    created_ts
+)
+VALUES
+(
+    :ticket_id,
+    :employee_id,
+    :department,
+    :issue_type,
+    :description,
+    :sentiment,
+    :priority,
+    :created_ts
+)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/java
+---
+{
+    ticket_id: payload.ticketId,
+    employee_id: payload.employeeId,
+    department: payload.department,
+    issue_type: payload.issueType,
+    description: payload.description,
+    sentiment: payload.sentiment,
+    priority: payload.priority,
+    created_ts: now()
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="1eedeadf-f51d-4e13-bb65-e5cceec0f56e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "SUCCESS"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+</mule>
+    
